@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "1+1=2" written in ink along the diagonal, kept inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-45"
+        android:scaleX="1.08"
+        android:scaleY="1.08">
+        <path
+            android:pathData="M26.75,50L31.75,45V63M35.75,54H44.75M40.25,49.5V58.5M48.75,50L53.75,45V63M57.75,51H66.75M57.75,57H66.75M70.75,49.5C70.75,46.5 73,45 75.9,45C79,45 81,47.2 81,50C81,53.5 77.5,56.5 70.75,63H81.25"
+            android:strokeWidth="3"
+            android:strokeColor="#1D3F94"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

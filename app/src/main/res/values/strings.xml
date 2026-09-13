@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Устный счёт</string>
+    <string name="start">Начать</string>
+    <string name="wrong_answer">Вы ошиблись</string>
+    <string name="channel_name">Тренировка</string>
+    <string name="notification_text">Идёт тренировка. Разблокируйте телефон, чтобы её остановить</string>
+    <string name="accessibility_description">Служба нужна только для того, чтобы погасить и заблокировать экран при нажатии кнопки «Начать». Содержимое экрана приложение не читает.</string>
+    <string name="enable_accessibility">Включите службу «Устный счёт» в разделе «Специальные возможности» → «Установленные приложения» и снова нажмите «Начать»</string>
+    <string name="need_microphone">Для тренировки нужен доступ к микрофону</string>
+    <string name="no_recognition">На телефоне нет системного распознавания речи</string>
+    <string name="no_russian_recognition">Системное распознавание речи не поддерживает русский язык</string>
+    <string name="tts_failed">Не удалось запустить системный синтез речи</string>
+    <string name="no_russian_tts">Системный синтез речи не поддерживает русский язык</string>
+</resources>

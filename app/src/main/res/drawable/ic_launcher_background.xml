@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A sheet of squared exercise-book paper. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFDF6"
+        android:pathData="M0,0H108V108H0Z" />
+    <path
+        android:pathData="M0,9H108M0,18H108M0,27H108M0,36H108M0,45H108M0,54H108M0,63H108M0,72H108M0,81H108M0,90H108M0,99H108M9,0V108M18,0V108M27,0V108M36,0V108M45,0V108M54,0V108M63,0V108M72,0V108M81,0V108M90,0V108M99,0V108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#9FC2E7" />
+</vector>
