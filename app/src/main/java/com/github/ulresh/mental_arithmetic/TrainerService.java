@@ -12,6 +12,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,6 +42,11 @@ public class TrainerService extends Service {
     private static final String CHANNEL_ID = "session";
     private static final int NOTIFICATION_ID = 1;
     private static final Locale RUSSIAN = Locale.forLanguageTag("ru-RU");
+    /** Media usage puts the voice on the media volume ("Мультимедиа"), which the volume keys control. */
+    private static final AudioAttributes VOICE_ATTRIBUTES = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build();
     private static final long WAKE_LOCK_TIMEOUT_MS = 4 * 60 * 60 * 1000L;
     /** Pause after speaking so the recognizer does not catch the tail of our own voice. */
     private static final long AFTER_SPEECH_DELAY_MS = 200;
@@ -67,6 +74,7 @@ public class TrainerService extends Service {
     private boolean ttsReady;
     private SpeechRecognizer recognizer;
     private PowerManager.WakeLock wakeLock;
+    private MediaSession mediaSession;
     private int utteranceCounter;
     private String currentUtteranceId;
     private int listenSession;
@@ -87,6 +95,14 @@ public class TrainerService extends Service {
         wakeLock = getSystemService(PowerManager.class)
                 .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "mental-arithmetic:session");
         wakeLock.acquire(WAKE_LOCK_TIMEOUT_MS);
+        // Between phrases nothing is playing, so the volume keys (on the locked screen too) would
+        // change the ringtone volume. A "playing" media session makes them change the voice volume.
+        mediaSession = new MediaSession(this, TAG);
+        mediaSession.setPlaybackToLocal(VOICE_ATTRIBUTES);
+        mediaSession.setPlaybackState(new PlaybackState.Builder()
+                .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+                .build());
+        mediaSession.setActive(true);
         recognizer = SpeechRecognizer.createSpeechRecognizer(this);
         tts = new TextToSpeech(this, this::onTtsInit);
     }
@@ -108,6 +124,7 @@ public class TrainerService extends Service {
         recognizer.destroy();
         tts.stop();
         tts.shutdown();
+        mediaSession.release();
         if (wakeLock.isHeld()) {
             wakeLock.release();
         }
@@ -146,10 +163,7 @@ public class TrainerService extends Service {
             fail(R.string.no_russian_tts);
             return;
         }
-        tts.setAudioAttributes(new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build());
+        tts.setAudioAttributes(VOICE_ATTRIBUTES);
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override
             public void onStart(String utteranceId) {

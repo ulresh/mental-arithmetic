@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -19,6 +20,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // The voice is played at the media volume, so let the volume keys adjust it here as well.
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
         findViewById(R.id.start).setOnClickListener(view -> start());
     }
 
