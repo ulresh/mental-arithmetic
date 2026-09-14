@@ -28,6 +28,8 @@ import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
@@ -43,6 +45,8 @@ public class TrainerService extends Service {
     private static final int NOTIFICATION_ID = 1;
     private static final Locale RUSSIAN = Locale.forLanguageTag("ru-RU");
     private static final float NORMAL_SPEECH_RATE = 1f;
+    /** More hypotheses give more chances that one of them contains the number. */
+    private static final int MAX_RECOGNITION_RESULTS = 10;
     /** Media usage puts the voice on the media volume ("Мультимедиа"), which the volume keys control. */
     private static final AudioAttributes VOICE_ATTRIBUTES = new AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -242,7 +246,8 @@ public class TrainerService extends Service {
         recognizer.startListening(new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 .putExtra(RecognizerIntent.EXTRA_LANGUAGE, RUSSIAN.toLanguageTag())
-                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5)
+                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, MAX_RECOGNITION_RESULTS)
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName()));
         restartListenTimeout();
     }
@@ -274,11 +279,17 @@ public class TrainerService extends Service {
         recognizer = SpeechRecognizer.createSpeechRecognizer(this);
     }
 
-    private void onRecognitionResults(List<String> hypotheses) {
+    /** Partial results are a fallback: they are used only when the final results contain no answer. */
+    private void onRecognitionResults(List<String> results, List<String> partialResults) {
         handler.removeCallbacks(listenTimeoutTask);
         state = State.WAITING;
         failures = 0;
-        Log.d(TAG, trainer.current() + " -> " + hypotheses);
+        Log.d(TAG, trainer.current() + " -> " + results + ", partial " + partialResults);
+        List<String> hypotheses = new ArrayList<>();
+        if (results != null) {
+            hypotheses.addAll(results);
+        }
+        hypotheses.addAll(partialResults);
         switch (trainer.onAnswer(hypotheses)) {
             case CORRECT -> {
                 trainer.next();
@@ -297,6 +308,7 @@ public class TrainerService extends Service {
         switch (error) {
             case SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 // Silence or unintelligible speech: keep waiting for the answer.
+                Log.d(TAG, trainer.current() + " -> nothing recognized, error " + error);
                 failures = 0;
                 scheduleListen(RELISTEN_DELAY_MS);
             }
@@ -315,6 +327,8 @@ public class TrainerService extends Service {
     /** Ignores callbacks that belong to an earlier, cancelled listening attempt. */
     private final class SessionListener implements RecognitionListener {
         private final int session;
+        /** The latest non-empty partial hypotheses of this attempt. */
+        private List<String> partial = Collections.emptyList();
 
         SessionListener(int session) {
             this.session = session;
@@ -352,7 +366,15 @@ public class TrainerService extends Service {
 
         @Override
         public void onError(int error) {
-            if (isCurrent()) {
+            if (!isCurrent()) {
+                return;
+            }
+            boolean nothingRecognized =
+                    error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT;
+            if (nothingRecognized && !partial.isEmpty()) {
+                // Something was heard while the user spoke, even though the final result is empty.
+                onRecognitionResults(null, partial);
+            } else {
                 onRecognitionError(error);
             }
         }
@@ -360,12 +382,18 @@ public class TrainerService extends Service {
         @Override
         public void onResults(Bundle results) {
             if (isCurrent()) {
-                onRecognitionResults(results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION));
+                onRecognitionResults(results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION), partial);
             }
         }
 
         @Override
         public void onPartialResults(Bundle partialResults) {
+            List<String> hypotheses = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+            if (isCurrent() && hypotheses != null
+                    && hypotheses.stream().anyMatch(text -> text != null && !text.trim().isEmpty())) {
+                partial = hypotheses;
+                restartListenTimeout();
+            }
         }
 
         @Override

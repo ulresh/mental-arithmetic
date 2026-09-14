@@ -12,6 +12,8 @@ public final class LogicTests {
     public static void main(String[] args) {
         parsesDigitsAndWords();
         parsesRepeatCommand();
+        parsesMisheardWords();
+        parsesApproximateWords();
         ignoresSpeechWithoutNumbers();
         usesFirstMeaningfulHypothesis();
         generatesProblemsInRange();
@@ -49,6 +51,40 @@ public final class LogicTests {
         expectKind("повтори, пожалуйста", AnswerParser.Kind.REPEAT);
         expectKind("Повторите", AnswerParser.Kind.REPEAT);
         expectKind("повторить 5", AnswerParser.Kind.REPEAT);
+    }
+
+    private static void parsesMisheardWords() {
+        expectNumber("всем", 7);
+        expectNumber("Семья", 7);
+        expectNumber("в осень", 8);
+        expectNumber("восьми", 8);
+        expectNumber("опять", 5);
+        expectNumber("при", 3);
+        expectNumber("трёх", 3);
+        expectNumber("шерсть", 6);
+        expectNumber("двадцать при", 23);
+    }
+
+    private static void parsesApproximateWords() {
+        expectNumber("шеснадцать", 16);
+        expectNumber("одинадцать", 11);
+        expectNumber("девятнацать", 19);
+        expectNumber("пятнадцати", 15);
+        expectNumber("восемнадцати", 18);
+        expectNumber("четыри", 4);
+        expectNumber("восемью", 8);
+        expectNumber("месть", 6);
+        // Too short to be matched approximately.
+        expectKind("есть", AnswerParser.Kind.NONE);
+        expectKind("да", AnswerParser.Kind.NONE);
+        // One edit away from both "девять" and "десять".
+        expectKind("деять", AnswerParser.Kind.NONE);
+        // Ordinary words of the answer must not turn into numbers.
+        expectKind("будет равно ответ пожалуйста правильно", AnswerParser.Kind.NONE);
+        check("distance десять/девять", AnswerParser.editDistance("десять", "девять") == 1);
+        check("distance шесть/шерсть", AnswerParser.editDistance("шесть", "шерсть") == 1);
+        check("distance кот/ток", AnswerParser.editDistance("кот", "ток") == 2);
+        check("distance empty", AnswerParser.editDistance("", "три") == 3);
     }
 
     private static void ignoresSpeechWithoutNumbers() {
