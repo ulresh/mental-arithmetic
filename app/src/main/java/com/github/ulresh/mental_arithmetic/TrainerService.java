@@ -53,8 +53,6 @@ public class TrainerService extends Service {
             .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
             .build();
     private static final long WAKE_LOCK_TIMEOUT_MS = 4 * 60 * 60 * 1000L;
-    /** Pause after speaking so the recognizer does not catch the tail of our own voice. */
-    private static final long AFTER_SPEECH_DELAY_MS = 200;
     private static final long RELISTEN_DELAY_MS = 300;
     private static final long MAX_RETRY_DELAY_MS = 5000;
     /** Restart the recognizer if it gives no callbacks for this long. */
@@ -213,7 +211,8 @@ public class TrainerService extends Service {
         if (finishing) {
             stopSelf();
         } else {
-            scheduleListen(AFTER_SPEECH_DELAY_MS);
+            state = State.WAITING;
+            listen();
         }
     }
 
