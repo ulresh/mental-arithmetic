@@ -42,6 +42,7 @@ public class TrainerService extends Service {
     private static final String CHANNEL_ID = "session";
     private static final int NOTIFICATION_ID = 1;
     private static final Locale RUSSIAN = Locale.forLanguageTag("ru-RU");
+    private static final float NORMAL_SPEECH_RATE = 1f;
     /** Media usage puts the voice on the media volume ("Мультимедиа"), which the volume keys control. */
     private static final AudioAttributes VOICE_ATTRIBUTES = new AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -181,14 +182,20 @@ public class TrainerService extends Service {
             }
         });
         ttsReady = true;
-        speak(trainer.next().speech());
+        trainer.next();
+        speakProblem();
     }
 
-    private void speak(String text) {
+    private void speakProblem() {
+        speak(trainer.current().speech(), trainer.speechRate());
+    }
+
+    private void speak(String text, float rate) {
         stopListening();
         state = State.SPEAKING;
         String utteranceId = "utterance-" + ++utteranceCounter;
         currentUtteranceId = utteranceId;
+        tts.setSpeechRate(rate);
         if (tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId) != TextToSpeech.SUCCESS) {
             Log.w(TAG, "Could not speak: " + text);
             onUtteranceDone(utteranceId);
@@ -216,7 +223,7 @@ public class TrainerService extends Service {
             return;
         }
         finishing = true;
-        speak(message);
+        speak(message, NORMAL_SPEECH_RATE);
         handler.postDelayed(this::stopSelf, FAIL_STOP_TIMEOUT_MS);
     }
 
@@ -273,9 +280,12 @@ public class TrainerService extends Service {
         failures = 0;
         Log.d(TAG, trainer.current() + " -> " + hypotheses);
         switch (trainer.onAnswer(hypotheses)) {
-            case CORRECT -> speak(trainer.next().speech());
-            case REPEAT -> speak(trainer.current().speech());
-            case WRONG -> speak(getString(R.string.wrong_answer));
+            case CORRECT -> {
+                trainer.next();
+                speakProblem();
+            }
+            case REPEAT -> speakProblem();
+            case WRONG -> speak(getString(R.string.wrong_answer), NORMAL_SPEECH_RATE);
             case NO_ANSWER -> scheduleListen(RELISTEN_DELAY_MS);
         }
     }

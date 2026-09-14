@@ -16,6 +16,7 @@ public final class LogicTests {
         usesFirstMeaningfulHypothesis();
         generatesProblemsInRange();
         trainerJudgesAnswers();
+        trainerSlowsDownOnRepeats();
         System.out.println("passed: " + passed + ", failed: " + failed);
         if (failed > 0) {
             System.exit(1);
@@ -104,6 +105,30 @@ public final class LogicTests {
                 "десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать",
                 "шестнадцать", "семнадцать", "восемнадцать"};
         check("correct word " + problem, reply(words, names[problem.sum()]) == Trainer.Reply.CORRECT);
+    }
+
+    private static void trainerSlowsDownOnRepeats() {
+        Trainer trainer = new Trainer(new Random(5));
+        Problem problem = trainer.next();
+        expectRate("new problem", trainer, 1.0f);
+        float[] expected = {0.9f, 0.8f, 0.7f, 0.6f, 0.5f, 0.5f, 0.5f};
+        for (int i = 0; i < expected.length; i++) {
+            reply(trainer, "повтори");
+            expectRate("repeat " + (i + 1), trainer, expected[i]);
+        }
+        reply(trainer, String.valueOf(problem.sum() + 1));
+        reply(trainer, "");
+        expectRate("wrong answer and silence keep the rate", trainer, 0.5f);
+        check("correct answer", reply(trainer, String.valueOf(problem.sum())) == Trainer.Reply.CORRECT);
+        trainer.next();
+        expectRate("next problem after repeats", trainer, 1.0f);
+        reply(trainer, "повтори");
+        expectRate("repeats counted anew", trainer, 0.9f);
+    }
+
+    private static void expectRate(String name, Trainer trainer, float rate) {
+        check(name + ": rate " + rate + " (got " + trainer.speechRate() + ")",
+                Math.abs(trainer.speechRate() - rate) < 1e-6);
     }
 
     private static Trainer.Reply reply(Trainer trainer, String text) {
